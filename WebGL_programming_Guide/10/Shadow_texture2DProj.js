@@ -75,6 +75,9 @@ var fs_src =
 // https://www.jianshu.com/p/b54f77569855
 //https://www.cnblogs.com/cxx-blogs/p/4924044.html
 //https://www.cnblogs.com/aokman/archive/2013/12/26/3492294.html
+//https://developer.nvidia.com/gpugems/gpugems2/part-ii-shading-lighting-and-shadows/chapter-17-efficient-soft-edged-shadows-using
+
+
 /*
 https://blog.csdn.net/jiexuan357/article/details/7922504
 3.HLSL没有shadow2DProj函数, GLSL的shadow2DProj返回的是深度比较的结果1.0或0.0的4元组,不是深度值!且要记住,shadow2DProj受到固定流水中纹理GL_TEXTURE_COMPARE_MODE/GL_TEXTURE_COMPARE_FUNC的影响,要使用shadow2DProj必须打开深度纹理比较模式.
