@@ -12,7 +12,11 @@ var shadow_fs_src =
 ' precision mediump float;\n' + 
 ' #endif \n' + 
 'void main() { \n' + 
-' gl_FragColor = vec4(gl_FragCoord.z,0.0,0.0,1.0);\n' +
+' const vec4 bitShift = vec4(1.0,256.0,256.0*256.0,256.0*256.0*256.0);\n'+
+' const vec4 bitMask = vec4(1.0/256.0,1.0/256.0,1.0/256.0,0.0);\n' + 
+' vec4 rgbaDepth = fract(gl_FragCoord.z*bitShift);\n' +
+' rgbaDepth -= rgbaDepth.gbaa * bitMask;\n' + 
+' gl_FragColor = rgbaDepth;\n' +
 '}\n'; 
 
 
@@ -29,6 +33,7 @@ var vs_src =
 ' v_Color = a_Color;\n' + 
 '}\n';
 
+
 var fs_src = 
 '#ifdef GL_ES\n' +
 'precision mediump float;\n' + 
@@ -36,33 +41,39 @@ var fs_src =
 'uniform sampler2D u_ShadowMap;\n' + 
 'varying vec4 v_PositionFromLight;\n' + 
 'varying vec4 v_Color;\n' + 
+'float unpackDepth(const in vec4 rgbaDepth) {\n'+
+'  const vec4 bitShift = vec4(1.0,1.0/256.0,1.0/(256.0*256.0),1.0/(256.0*256.0*256.0));\n'+
+'	float depth = dot(rgbaDepth, bitShift);\n' + 
+' 	return depth;\n' + 
+' }\n' + 
 'void main() { \n' + 
 
 //// use texture2D
 ////--------------------------------------------------------------
 ' vec3 shadowCoord = (v_PositionFromLight.xyz/v_PositionFromLight.w)/2.0+0.5;\n' +
 ' vec4 rgbaDepth = texture2D(u_ShadowMap,shadowCoord.xy);\n' + 
-' float depth = rgbaDepth.r;\n' + 
-' float visibility = (shadowCoord.z > depth + 0.005)?0.7:1.0;\n' + 
-////--------------------------------------------------------------
-//// use texture2DProj
-////--------------------------------------------------------------
-// ' mat4 scale_bais_Matrix = mat4(0.5,0.0,0.0,0.0, 0.0,0.5,0.0,0.0, 0.0,0.0,0.5,0.0,0.5,0.5,0.5,1.0);\n' +
- // //'vec4 textureCoords = v_PositionFromLight/2.0+0.5;\n' +  
-  // 'vec4 textureCoords = scale_bais_Matrix*v_PositionFromLight;\n' + 
- // ' vec4 rgbaDepth = texture2DProj(u_ShadowMap,textureCoords);\n' + 
- // ' float depth = rgbaDepth.r;\n' + 
- // //' float visibility = (depth < 1.0)?0.7:1.0;\n' + 
-  // ' float visibility = (textureCoords.z/textureCoords.w > depth + 0.005 )?0.7:1.0;\n' + 
-///--------------------------------------------------------------
+' float depth = unpackDepth(rgbaDepth);\n' + 
+' float visibility = (shadowCoord.z > depth + 0.0015)?0.7:1.0;\n' + 
 ' gl_FragColor = vec4(v_Color.rgb*visibility,v_Color.a);\n' + 
-//'gl_FragColor =vec4(visibility,0,0,1);\n// rgbaDepth;\n' +
-//' gl_FragColor = vec4(1,0,0,1);\n' + 
 '}\n';
 
+// use texture2DProj 
+// 对于点光源，需要对投影进行特殊处理:https://en.wikibooks.org/wiki/GLSL_Programming/Unity/Cookies
+// https://www.jianshu.com/p/b54f77569855
+// Vertex shader program for regular drawing
 
+// 阴影相关文章：
+// https://blog.csdn.net/ronintao/article/details/51649664
+//https://blog.csdn.net/hoytGM/article/details/38343829
+// https://www.jianshu.com/p/b54f77569855
+//https://www.cnblogs.com/cxx-blogs/p/4924044.html
+//https://www.cnblogs.com/aokman/archive/2013/12/26/3492294.html
+/*
+https://blog.csdn.net/jiexuan357/article/details/7922504
+3.HLSL没有shadow2DProj函数, GLSL的shadow2DProj返回的是深度比较的结果1.0或0.0的4元组,不是深度值!且要记住,shadow2DProj受到固定流水中纹理GL_TEXTURE_COMPARE_MODE/GL_TEXTURE_COMPARE_FUNC的影响,要使用shadow2DProj必须打开深度纹理比较模式.
+*/
 var OFFSCREEN_WIDTH = 2048,OFFSCREEN_HEIGHT = 2048;
-var LIGHT_X = 0, LIGHT_Y = 7, LIGHT_Z = 2; // light position  (pointlight)
+var LIGHT_X = 0, LIGHT_Y = 40, LIGHT_Z = 2; // light position  (pointlight)
 
 function main() {
  // Retrieve <canvas> element
@@ -342,12 +353,8 @@ function initFramebufferObject(gl){
     }
     gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,OFFSCREEN_WIDTH,OFFSCREEN_HEIGHT,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-	 gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-															 
-	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
-    //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
-	 
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
     depthBuffer = gl.createRenderbuffer();
     if(!depthBuffer) {
       console.log('Failed to create depthbuffer.');
