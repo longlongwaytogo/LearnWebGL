@@ -29,7 +29,6 @@ var vs_src =
 ' v_Color = a_Color;\n' + 
 '}\n';
 
-
 var fs_src = 
 '#ifdef GL_ES\n' +
 'precision mediump float;\n' + 
@@ -41,23 +40,52 @@ var fs_src =
 
 //// use texture2D
 ////--------------------------------------------------------------
-' vec3 shadowCoord = (v_PositionFromLight.xyz/v_PositionFromLight.w)/2.0+0.5;\n' +
-' vec4 rgbaDepth = texture2D(u_ShadowMap,shadowCoord.xy);\n' + 
-' float depth = rgbaDepth.r;\n' + 
-' float visibility = (shadowCoord.z > depth + 0.005)?0.7:1.0;\n' + 
+// ' vec3 shadowCoord = (v_PositionFromLight.xyz/v_PositionFromLight.w)/2.0+0.5;\n' +
+// ' vec4 rgbaDepth = texture2D(u_ShadowMap,shadowCoord.xy);\n' + 
+// ' float depth = rgbaDepth.r;\n' + 
+// ' float visibility = (shadowCoord.z > depth + 0.005)?0.7:1.0;\n' + 
 ////--------------------------------------------------------------
 //// use texture2DProj
 ////--------------------------------------------------------------
-// 'vec3 textureCoords = vec3(vec2(v_PositionFromLight) + vec2(0.5 * v_PositionFromLight.w), v_PositionFromLight.w);\n' +  
+ 'vec4 textureCoords = v_PositionFromLight/2.0+0.5;\n' +  
 
-// ' vec4 rgbaDepth = texture2DProj(u_ShadowMap,textureCoords);\n' + 
-// ' float depth = rgbaDepth.r;\n' + 
-// ' float visibility = (depth < 0.750)?0.7:1.0;\n' + 
+ ' vec4 rgbaDepth = texture2DProj(u_ShadowMap,textureCoords);\n' + 
+ ' float depth = rgbaDepth.r;\n' + 
+ ' float visibility = (depth < 1.0)?0.7:1.0;\n' + 
 ///--------------------------------------------------------------
 ' gl_FragColor = vec4(v_Color.rgb*visibility,v_Color.a);\n' + 
-//'gl_FragColor = rgbaDepth;\n' +
+'gl_FragColor = rgbaDepth;\n' +
 //' gl_FragColor = vec4(1,0,0,1);\n' + 
 '}\n';
+
+// var fs_src = 
+// '#ifdef GL_ES\n' +
+// 'precision mediump float;\n' + 
+// '#endif\n' +
+// 'uniform sampler2D u_ShadowMap;\n' + 
+// 'varying vec4 v_PositionFromLight;\n' + 
+// 'varying vec4 v_Color;\n' + 
+// 'void main() { \n' + 
+
+// //// use texture2D
+// ////--------------------------------------------------------------
+// ' vec3 shadowCoord = (v_PositionFromLight.xyz/v_PositionFromLight.w)/2.0+0.5;\n' +
+// ' vec4 rgbaDepth = texture2D(u_ShadowMap,shadowCoord.xy);\n' + 
+// ' float depth = rgbaDepth.r;\n' + 
+// ' float visibility = (shadowCoord.z > depth + 0.005)?0.7:1.0;\n' + 
+// ////--------------------------------------------------------------
+// //// use texture2DProj
+// ////--------------------------------------------------------------
+// // 'vec3 textureCoords = vec3(vec2(v_PositionFromLight) + vec2(0.5 * v_PositionFromLight.w), v_PositionFromLight.w);\n' +  
+
+// // ' vec4 rgbaDepth = texture2DProj(u_ShadowMap,textureCoords);\n' + 
+// // ' float depth = rgbaDepth.r;\n' + 
+// // ' float visibility = (depth < 0.750)?0.7:1.0;\n' + 
+// ///--------------------------------------------------------------
+// ' gl_FragColor = vec4(v_Color.rgb*visibility,v_Color.a);\n' + 
+// //'gl_FragColor = rgbaDepth;\n' +
+// //' gl_FragColor = vec4(1,0,0,1);\n' + 
+// '}\n';
 
 // use texture2DProj 
 // 对于点光源，需要对投影进行特殊处理:https://en.wikibooks.org/wiki/GLSL_Programming/Unity/Cookies
@@ -73,6 +101,35 @@ var fs_src =
 /*
 https://blog.csdn.net/jiexuan357/article/details/7922504
 3.HLSL没有shadow2DProj函数, GLSL的shadow2DProj返回的是深度比较的结果1.0或0.0的4元组,不是深度值!且要记住,shadow2DProj受到固定流水中纹理GL_TEXTURE_COMPARE_MODE/GL_TEXTURE_COMPARE_FUNC的影响,要使用shadow2DProj必须打开深度纹理比较模式.
+*/
+
+/*
+参考OpenGL Programming guide 9 第七章中关于阴影的处理，构造一个变换矩阵，同时使用textureProj函数计算深度比较，大体思路是：
+1. 使用fbo，将视点放置到灯光的位置进行一次绘制，获取深度纹理数据[通过关联深度缓冲区]
+2. 构造ShadowMapMatrix矩阵，该矩阵的构造方式为： scalebiasMatrix*ProjectMatix*ViewMatrix*ModelMatrix 
+	其中，修正矩阵：即为将深度从[-1，1]变换到0-1： 缩小0.5，平移0.5，即：
+	scalebiasMatrix =   |0.5,0.0,0.0,0.5|
+						|0.0,0.5,0.0,0.5|
+						|0.0,0.0,0.5,0.5|
+						|0.0,0.0,0.0,1.0| 
+			
+		可以通过推到，得出该方法在最后使用textureProj方法，与本教程中自己变换，使用texture2d效果等同，具体推到如下： 
+		scalebiasMatrix矩阵中缩放因子设为S，平移因子设置为T
+		经过MVP变换后的顶点为：Pos[xyzw];
+		shadowCoord = scale_bais_Matrix*Pos = [Sx+Tw,Sy+Tw,Sz+Tw,w];
+		textureProj会在内部除以shadowCoord的w分量 = [(Sx+Tw)/w,(Sy+Tw)/w,(Sz+Tw),1]
+		
+本例子中使用的变换为： 
+    shadowCoord = (v_PositionFromLight.xyz/v_PositionFromLight.w)/2.0+0.5；
+	v_PositionFromLight即为经过MVP变换后的结果，及Pos[xyzw];
+	乘以1/2.0及缩放因子S=0.5,加上0.5,即平移T=0.5;
+	上式可以展开为：
+	shadowCoord = (Sx/w,Sy/w,Sz)+T
+				= [(Sx+Tw)/w, Sy+Tw)/w,(Sz+Tw)/w]
+				
+	但是需要注意： 使用textureProj函数，要在代码中对纹理设置：
+	 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 */
 var OFFSCREEN_WIDTH = 2048,OFFSCREEN_HEIGHT = 2048;
 var LIGHT_X = 0, LIGHT_Y = 7, LIGHT_Z = 2; // light position  (pointlight)
@@ -357,6 +414,9 @@ function initFramebufferObject(gl){
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,OFFSCREEN_WIDTH,OFFSCREEN_HEIGHT,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
 
+	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE);
+     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+	 
     depthBuffer = gl.createRenderbuffer();
     if(!depthBuffer) {
       console.log('Failed to create depthbuffer.');
