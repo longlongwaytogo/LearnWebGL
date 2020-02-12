@@ -1,4 +1,5 @@
 // app.js requestAnim shim layer 
+//通过检测多个平台的动画循环接口，进行调用一个有效的接口。
 window.requestAnimFrame = (function() {
 	return window.requestAnimationFrame ||
 		   window.webkitRequestAnimationFrame ||
@@ -10,6 +11,7 @@ window.requestAnimFrame = (function() {
 		   };
 })();
 
+// 程序主要实现框架
 var app = (function(){
 	var module = {};
 	
@@ -112,9 +114,11 @@ var app = (function(){
 			pngDecoder.process(renderer);
 			
 			// set initial tone mapping operator
-			self.currentTMOName = "Durand02";
+			//self.currentTMOName = "Durand02";
+			self.currentTMOName = "none";
 			
-			//GUI
+			//GUI 
+			// 创建一个gui选择对话框 包含none 和 Durand02 选项
 			var gui,options;
 			gui = new GUI();
 			options = Object.keys(self.tmos);
@@ -146,6 +150,23 @@ app.init();
 	
 				
 	
+/* 程序流程分析：
+1. requestAnimFrame函数，通过检测多个平台的动画循环接口，进行调用一个有效的接口。
+2. app 对象为主要接口，该对象为javascript类，通过函数返回
+
+3. 程序执行主要流程：
+ 3.1 动态创建div对象，添加到body中，用于绘制程序
+ 3.2 动态创建Stats对象，添加到body中，用于显示状态信息
+ 3.3 检测webgl扩展接口是否支持GLI_frame_terminator
+ 3.4 加载图片，创建imageTexture对象，在image的OnLoad异步执行后，执行一下操作
+ 3.5 创建THREEJS Renderer对象
+ 3.6 加载shaders文件，加载异步操作时，执行下一步操作
+ 3.7 设置两个Filter，None和Durand02作为切换filter
+ 3.8 Decode HDR image file
+ 3.9 设置toneMap算法
+ 3.10 执行渲染循环
+ 3.11 程序运行，通过调整Gamma和Exposure调整uniform参数
+*/
 	
 	
 	

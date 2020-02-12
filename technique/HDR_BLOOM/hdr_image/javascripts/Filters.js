@@ -1,4 +1,25 @@
 // Filter.js
+/*
+Filters.js 用于创建多个过滤滤镜
+1. THREE.utils.extend 设置继承关系
+2. 每个Filter通过创建一个Plane作为渲染目标
+
+3. Filters.Basic类主要方法：
+3.1 构造函数：创建Plane对象\场景\渲染目标\
+3.2 PNGHDRDecode： 从PNG中解压HDR数据
+
+4. tmo::none滤镜
+4.1 将HDR图作为第一张图片
+4.2 使用gmma校正和Exposure修改图像效果
+
+5. tmo::Durand02TMO滤镜
+5.1 使用HDR图作为第一张图片输入
+5.2 使用GrayScale滤镜作为亮度1输入
+5.3 使用Bilateral滤镜作为亮度2输入
+
+*/
+
+
 THREE.utils = {};
 
 // Classical inheritance using proxy function 
@@ -55,6 +76,7 @@ THREE.filters.Basic.prototype.process = function( renderer,renderToScreen){
 // PNG HDR decode filter
 THREE.filters.PNGHDRDecode = function (texture, shaders) {
     var shader = {
+		// tPNG:为Uniform变量名称
         uniforms: {
             tPNG: { type: "t", value: 0, texture: texture }
         },
@@ -255,4 +277,4 @@ function buildKernel(sigma) {
     return values;
 }
 
-	
+
