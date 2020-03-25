@@ -1,9 +1,60 @@
 <html>
 	<body >
+	 <div id="info">
+		Hello WebGL ... ,tody is 2018/06/10
+	 </div>
+	 <div>
+		<a href="WebGL_programming_Guide/readme.html">webgl编程指南</a>
+	</div>
 	
+	 <p>
+	 reference website:
+	 <p>
+		<a href="http://github.khronos.org">http://github.khronos.org</a>
+		<p>
+		<a href="https://github.com/KhronosGroup/WebGL">https://github.com/KhronosGroup/WebGL</a>
+		<p>
+		<a href="http://www.opengl-redbook.com\">http://www.opengl-redbook.com\</a>
+	
+
 	 Hello WebGL ... ,tody is 2018/06/10
 	 <p></p>
 	 <a href="threejs/examples/base_1.createScene.html">base_1.createScene.html</a>
 	 <a href="threejs/examples/bloom/glsl-bloom.html">glsl-bloom.html	</a>
+
 	</body >
+	<script>
+	
+		Date.prototype.format = function(fmt){
+		  var o = {
+			"M+" : this.getMonth()+1,                 //月份
+			"d+" : this.getDate(),                    //日
+			"h+" : this.getHours(),                   //小时
+			"m+" : this.getMinutes(),                 //分
+			"s+" : this.getSeconds(),                 //秒
+			"q+" : Math.floor((this.getMonth()+3)/3), //季度
+			"S"  : this.getMilliseconds()             //毫秒
+		  };
+
+		  if(/(y+)/.test(fmt)){
+			fmt=fmt.replace(RegExp.$1, (this.getFullYear()+"").substr(4 - RegExp.$1.length));
+	  }
+			
+	  for(var k in o){
+		if(new RegExp("("+ k +")").test(fmt)){
+		  fmt = fmt.replace(
+			RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));  
+		}       
+	  }
+
+	  return fmt;
+	}
+	
+	function main() {
+	var tm = "Hello webGL...,tody is:" +(new Date().format("yyyy年MM月dd日"));
+	console.log(tm);
+		document.getElementById('info').innerHTML =  tm;
+	}
+	main();
+	</script>
 </html>
